@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LogIn | Telegram Router</title>
+</head>
+<body>
+
+<div align="left">
+    <form action="/check/login" method="post">
+        <label>API ID: </label><input type="text" name="api_id" class="api__id">
+        <br>
+        <label>API HASH: </label><input type="text" name="api_hash" class="api__hash">
+        <br>
+        <label>BOT TOKEN: </label><input type="text" name="bot_token" class="bot__token">
+        <br>
+        <label>I'm not using a bot (that side for non-token clients): </label><input type="checkbox" name="is_userbot" class="checkbox">
+        <br>
+        <br>
+        <input type="submit" class="submit_btn">
+    </form>
+</div>
+    
+</body>
+</html>
