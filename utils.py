@@ -1,58 +1,65 @@
-from datetime import datetime
-import re
-from pyrogram import Client, filters, enums
-from sqlite3 import connect
-import bot
+import json
+from pyrogram import Client
+from iotypes import Methods
+from MentoDB import *
+from database import db
 
-database = connect("sessions.db", check_same_thread=False)
-cursor = database.cursor()
+JSON = lambda data: json.loads(str(data))
 
-class Request:
-    def __init__(self, method: str):
-        self.POST    : str = bool(re.match("post|POST|Post", method))
-        self.GET     : str = bool(re.match("get|GET|Get", method))
-        self.method  : str = "POST" if self.POST else ("GET" if self.GET else None)
 
-class Session:
-    def __init__(self, ip: str = None, datetime: datetime = datetime.now(), api_id: int = 0, api_hash: str = "", bot_token: str = "", is_active: int = 0):
-        self.ip = ip
-        self.api_id = api_id
-        self.api_hash = api_hash
-        self.bot_token = bot_token
-        self.date = datetime
-        self.timestamp = datetime.timestamp()
-        self.is_active = is_active
-        self.has_session = bool(self.is_active)
-    def create(self):
-        cursor.execute("CREATE TABLE IF NOT EXISTS sessions (id int, ip_address text, api_id int, api_hash text, bot_token text, date text, timestamp int, is_active int)")
-        database.commit()
+class Config:
+    def __init__(
+        self,
+        user_id: int = 0,
+        api_id: int = 0,
+        api_hash: str = "",
+        bot_token: str = "",
+        string_session: str = "",
+    ):
+        self.user_id: int = user_id
+        self.api_id: int = api_id
+        self.api_hash: str = api_hash
+        self.bot_token: str = bot_token
+        self.string_session: str = string_session
+
     def insert(self):
-        cursor.execute(f"INSERT INTO sessions VALUES ({int(self.timestamp + self.api_id)}, '{self.ip}', {self.api_id}, '{self.api_hash}', '{self.bot_token}','{self.date}', {int(self.timestamp)}, {self.is_active})")
-        database.commit()
-    def get(self, ip_address: str = None) -> "Session":
-        if not ip_address and not self.ip:
-            return self
-        else:
-            current_ip = self.ip if not ip_address else ip_address
-            user_sessions = cursor.execute(f"SELECT * FROM sessions where ip_address = '{current_ip}' ORDER BY -timestamp").fetchall()
-            if len(user_sessions) > 0:
-                ip, api_id, api_hash, bot_token, date, timestamp, is_active = user_sessions[0][1:]
-                return Session(ip=ip, datetime=datetime.fromtimestamp(timestamp), api_id=api_id, api_hash=api_hash, bot_token=bot_token, is_active=is_active)
-            else:
-                return self
-
-            return user_sessions
-    def update(self) -> "Session":
-        query = "ip_address = '{}', api_id = {}, api_hash = '{}', bot_token = '{}', date = '{}', timestamp = {}, is_active = {}".format(
-            self.ip,
-            self.api_id,
-            self.api_hash, 
-            self.bot_token,
-            self.date,
-            self.timestamp,
-            self.is_active
+        db.insert(
+            "sessions",
+            data=dict(
+                user_id=self.user_id,
+                api_id=self.api_id,
+                api_hash=self.api_hash,
+                bot_token=self.bot_token,
+                string_session=self.string_session,
+            ),
         )
-        cursor.execute(f"UPDATE sessions SET {query} where ip_address = '{self.ip}'")
-        database.commit()
 
-        return self.get()
+    def get_session(self):
+        sessions = db.select("sessions")
+        if sessions:
+            session = sessions[0]
+            session = dict((k, v) for k, v in session.items() if not k == "user_id")
+            return session
+        return dict(name="Session")
+
+
+async def async_execute(
+    config: dict, method: Methods = Methods.GET_ME, *args, **kwargs
+):
+    async with Client(**config, in_memory=True) as client:
+        job = client.__getattribute__(method)
+        data = await job(*args, **kwargs)
+        return data
+
+
+class Response:
+    __name__ = "response"
+
+
+class Form:
+    def __new__(cls, form_data: dict):
+        form = dict(form_data)
+        base = Response()
+        for k, v in form.items():
+            setattr(base, k, v)
+        return base
